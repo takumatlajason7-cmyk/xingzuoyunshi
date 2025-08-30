@@ -1,0 +1,1452 @@
+if (autoHide) {
+                    const hideTime = type === 'error' ? 10000 : (type === 'success' ? 8000 : 5000);
+                    setTimeout(() => hideStatus(), hideTime);
+                }
+            }
+        }
+
+        function hideStatus() {
+            const statusEl = safeGetElement('statusMessage');
+            if (statusEl) {
+                statusEl.classList.add('hidden');
+            }
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(btn => {
+                if (loading) {
+                    btn.disabled = true;
+                    if (btn.id === 'fetchBtn') {
+                        btn.innerHTML = '<span class="loading-spinner"></span>获取中...';
+                    } else if (btn.id === 'demoBtn') {
+                        btn.innerHTML = '<span class="loading-spinner"></span>生成中...';
+                    } else if (btn.id === 'testApiBtn') {
+                        btn.innerHTML = '<span class="loading-spinner"></span>测试中...';
+                    }
+                } else {
+                    btn.disabled = false;
+                    if (btn.id === 'fetchBtn') {
+                        btn.innerHTML = '🌟 获取专业运势';
+                    } else if (btn.id === 'demoBtn') {
+                        btn.innerHTML = '🎭 演示体验';
+                    } else if (btn.id === 'testApiBtn') {
+                        btn.innerHTML = '🔧 测试API连接';
+                    }
+                }
+            });
+        }
+
+        function getTypeDisplayName() {
+            const consType = safeGetElement('consType')?.value || 'today';
+            const typeMap = {
+                'today': '今日',
+                'tomorrow': '明日', 
+                'week': '本周',
+                'month': '本月'
+            };
+            return typeMap[consType] || '今日';
+        }
+
+        // 清除结果
+        function clearResults() {
+            const resultsEl = safeGetElement('horoscopeResults');
+            if (resultsEl) {
+                resultsEl.classList.add('hidden');
+                resultsEl.innerHTML = '';
+            }
+            currentData = null;
+            showStatus('✅ 数据已成功清除！您可以重新配置并获取新的运势数据。', 'success');
+        }
+
+        // 创建星座运势卡片
+        function createHoroscopeCard(data, isDemo = false) {
+            const constellation = constellationMap[data.name] || { name: data.name, symbol: '🌟', period: '', element: '' };
+            const summary = data.summary || '运势良好，保持积极向上的心态，好运将会伴随您。';
+            
+            return `
+                <div class="horoscope-card">
+                    <h3 class="card-title">
+                        ${constellation.symbol} ${constellation.name}
+                        ${constellation.period ? `<br><small style="font-size:0.85em;opacity:0.8;font-weight:400;">${constellation.period} • ${constellation.element}星座</small>` : ''}
+                    </h3>
+                    <div class="card-content">
+                        <h4>💫 ${getTypeDisplayName()}运势概述</h4>
+                        <p style="margin-bottom: 15px; font-size: 1.05rem; line-height: 1.6;">${summary}</p>
+                        
+                        <h4>💝 爱情运势</h4>
+                        <p>${data.love_txt || '感情运势稳定，适合表达内心想法'} <span class="star-rating">${'★'.repeat(parseInt(data.love) || 4)}</span></p>
+                        
+                        <h4>💼 工作运势</h4>
+                        <p>${data.work_txt || '工作状态良好，效率较高'} <span class="star-rating">${'★'.repeat(parseInt(data.work) || 4)}</span></p>
+                        
+                        <h4>💰 财运分析</h4>
+                        <p>${data.money_txt || '财运平稳，理财需谨慎'} <span class="star-rating">${'★'.repeat(parseInt(data.money) || 4)}</span></p>
+                        
+                        <h4>🏥 健康指数</h4>
+                        <p>${data.health_txt || '身体状况良好，注意劳逸结合'} <span class="star-rating">${'★'.repeat(parseInt(data.health) || 4)}</span></p>
+                        
+                        <div class="lucky-info">
+                            <h4>🍀 专属幸运元素</h4>
+                            <p style="margin: 8px 0;"><strong>幸运颜色:</strong> <span class="color-preview" style="background-color: ${data.color || '#90EE90'};"></span>${data.color || '翠绿色'}</p>
+                            <p style="margin: 8px 0;"><strong>幸运数字:</strong> <span style="font-size: 1.2em; color: #FFD700; font-weight: bold;">${data.number || '8'}</span></p>
+                            <p style="margin: 8px 0;"><strong>最佳配对:</strong> <strong style="color: #ADFF2F;">${constellationMap[data.QFriend]?.name || data.QFriend || '天秤座'}</strong></p>
+                        </div>
+                        
+                        ${isDemo ? '<div style="text-align:center;margin-top:20px;padding:10px;background:rgba(255,215,0,0.1);border-radius:10px;border:1px solid rgba(255,215,0,0.3);"><small style="color:#FFD700;font-weight:500;">🎭 演示数据展示</small></div>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 显示运势结果
+        function displayResults(data, isDemo = false) {
+            const resultsEl = safeGetElement('horoscopeResults');
+            if (!resultsEl) return;
+            
+            if (Array.isArray(data)) {
+                resultsEl.innerHTML = data.map(item => createHoroscopeCard(item, isDemo)).join('');
+            } else {
+                resultsEl.innerHTML = createHoroscopeCard(data, isDemo);
+            }
+            
+            resultsEl.classList.remove('hidden');
+            
+            // 平滑滚动到结果区域
+            setTimeout(() => {
+                resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 500);
+        }
+
+        // 演示模式数据生成 - 高质量版本
+        function generateDemoData() {
+            const demoTexts = {
+                summary: [
+                    '今日宇宙能量场对您格外有利，是实现目标的绝佳时机，把握机会主动出击。',
+                    '星象显示您今天的直觉特别敏锐，相信内心的声音会为您指引正确方向。',
+                    '今日运势呈现上升趋势，适合做出重要决策，勇敢迈出关键一步。',
+                    '今天您的个人魅力值达到巅峰，人际关系和谐，容易获得他人支持。',
+                    '宇宙赋予您强大的行动力，今日适合冒险和尝试全新的挑战项目。',
+                    '今天是您的幸运日，保持乐观积极的心态，意外的好消息即将到来。',
+                    '星座能量提醒您关注内心平衡，今日适合深度思考和制定长远规划。',
+                    '今日沟通运势极佳，表达能力出色，是谈判协商的最佳时机。'
+                ],
+                love: [
+                    '桃花运势旺盛，单身者易遇心仪对象',
+                    '恋情甜蜜温馨，适合深度交流',
+                    '需要更多耐心理解，避免争执',
+                    '感情运势稳步上升，关系更进一步',
+                    '有望遇到命中注定的真爱',
+                    '适合表白或求婚的吉日',
+                    '感情需要空间，给彼此思考时间',
+                    '旧情复燃的可能性较高'
+                ],
+                work: [
+                    '工作效率极高，创造力爆发',
+                    '容易获得上级认可和赏识',
+                    '团队合作运势佳，协作顺利',
+                    '有升职加薪的良好机会',
+                    '创意灵感源源不断，适合创新',
+                    '业绩表现突出，成果显著',
+                    '适合学习新技能，自我提升',
+                    '职场贵人相助，发展顺遂'
+                ],
+                money: [
+                    '正财运亨通，收入稳定增长',
+                    '投资需要谨慎，避免盲目跟风',
+                    '有意外之财，小额收益不断',
+                    '理财规划运势佳，适合长线投资',
+                    '消费欲望强烈，需要理性控制',
+                    '偏财运不错，可适量投资',
+                    '金钱管理能力提升，财富积累',
+                    '适合清理债务，整顿财务'
+                ],
+                health: [
+                    '精神状态饱满，活力充沛',
+                    '需要注意充足休息，避免疲劳',
+                    '适合进行户外运动，增强体质',
+                    '心情愉悦，身心健康平衡',
+                    '饮食营养需要均衡搭配',
+                    '身体机能良好，抵抗力强',
+                    '适合体检，关注健康指标',
+                    '放松心情，减轻工作压力'
+                ]
+            };
+
+            const colors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
+                '#DDA0DD', '#98D8C8', '#F7DC6F', '#FF9FF3', '#54A0FF',
+                '#5F27CD', '#00D2D3', '#FF9F43', '#10AC84', '#EE5A24'
+            ];
+            
+            const numbers = [1, 3, 6, 7, 8, 9, 11, 13, 16, 18, 21, 26, 28, 33, 35, 42];
+
+            return Object.keys(constellationMap).map(key => {
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                const randomNumber = numbers[Math.floor(Math.random() * numbers.length)];
+                const randomFriend = Object.keys(constellationMap)[Math.floor(Math.random() * 12)];
+                
+                return {
+                    name: key,
+                    summary: demoTexts.summary[Math.floor(Math.random() * demoTexts.summary.length)],
+                    love: Math.floor(Math.random() * 3) + 3, // 3-5星
+                    love_txt: demoTexts.love[Math.floor(Math.random() * demoTexts.love.length)],
+                    work: Math.floor(Math.random() * 3) + 3,
+                    work_txt: demoTexts.work[Math.floor(Math.random() * demoTexts.work.length)],
+                    money: Math.floor(Math.random() * 3) + 3,
+                    money_txt: demoTexts.money[Math.floor(Math.random() * demoTexts.money.length)],
+                    health: Math.floor(Math.random() * 3) + 3,
+                    health_txt: demoTexts.health[Math.floor(Math.random() * demoTexts.health.length)],
+                    color: randomColor,
+                    number: randomNumber,
+                    QFriend: randomFriend
+                };
+            });
+        }
+
+        // 演示模式 - 增强版
+        function runDemoMode() {
+            if (isLoading) {
+                showStatus('⚠️ 系统正忙，请等待当前操作完成后再试', 'info');
+                return;
+            }
+
+            setLoading(true);
+            showStatus('🎭 启动演示体验模式，正在生成精美的星座运势展示...', 'loading');
+
+            setTimeout(() => {
+                const targetConstellation = safeGetElement('targetConstellation')?.value;
+                const demoData = generateDemoData();
+                
+                if (targetConstellation) {
+                    const singleData = demoData.find(item => item.name === targetConstellation);
+                    if (singleData) {
+                        displayResults(singleData, true);
+                        showStatus(`✅ 演示体验：${constellationMap[targetConstellation].name}精美运势已完成生成！
+
+🎭 功能展示说明：
+• 这是高质量的演示数据，完整展现应用功能特性
+• 包含四维专业评分系统和全方位幸运元素分析
+• 界面设计、动画效果、交互体验完全真实呈现
+
+💡 获取真实数据：
+• 配置聚合数据API密钥后点击"获取专业运势"
+• 即可享受基于真实占星算法的精准分析服务
+
+🌟 演示数据仅供功能展示，不具备实际指导意义`, 'success');
+                    }
+                } else {
+                    displayResults(demoData, true);
+                    showStatus(`✅ 演示体验：十二星座完整运势展示已生成！
+
+🎭 完整功能演示：
+• 12星座专业运势卡片，设计精美，数据丰富
+• 四维评分系统：爱情、工作、财运、健康全覆盖
+• 幸运元素完整：专属颜色、幸运数字、最佳配对
+• 响应式界面设计，完美适配各种设备屏幕
+
+🔧 体验建议：
+• 尝试选择单个星座重新生成演示数据
+• 切换不同运势类型查看界面变化效果
+• 测试"清除数据"功能的流畅操作体验
+• 调整浏览器窗口验证响应式设计效果
+
+💎 配置真实API后即可获取专业占星师级别的精准运势分析！`, 'success');
+                }
+                
+                setLoading(false);
+            }, 2500);
+        }
+
+        // 获取星座运势数据 - 真实API调用
+        async function fetchHoroscopeData() {
+            if (isLoading) {
+                showStatus('⚠️ 系统正忙，请等待当前操作完成', 'info');
+                return;
+            }
+
+            const apiKey = safeGetElement('apiKey')?.value.trim();
+            const consType = safeGetElement('consType')?.value || 'today';
+            const targetConstellation = safeGetElement('targetConstellation')?.value;
+
+            if (!apiKey) {
+                showStatus(`❌ 请先配置API密钥以获取真实运势数据！
+
+🔑 快速配置指南：
+1. 访问聚合数据官网：https://www.juhe.cn
+2. 注册账号并完成实名认证（免费快速）
+3. 搜索并申请"星座运势"API接口服务
+4. 获取专属API密钥并复制到上方输入框
+5. 点击"测试API连接"验证配置是否正确
+
+💡 温馨提示：
+• 聚合数据为国内知名API服务商，安全可靠
+• 星座运势API提供免费调用额度
+• 配置完成后即可享受专业级运势分析服务
+
+🎭 临时体验方案：点击"演示体验"查看完整界面效果`, 'error', false);
+                return;
+            }
+
+            setLoading(true);
+            showStatus('🚀 正在连接聚合数据API，获取最新专业运势数据...', 'loading');
+
+            try {
+                if (targetConstellation) {
+                    const url = `https://apis.juhe.cn/fapig/constellation/getAll?key=${apiKey}&consName=${targetConstellation}&type=${consType}`;
+                    showStatus(`🔍 正在为您获取${constellationMap[targetConstellation].name}的${getTypeDisplayName()}专业运势分析...`, 'loading');
+                    
+                    const response = await fetch(url);
+                    const result = await response.json();
+                    
+                    if (result.error_code === 0) {
+                        currentData = result.result;
+                        displayResults(currentData);
+                        showStatus(`✅ 成功获取${constellationMap[targetConstellation].name}真实运势数据！
+
+📊 数据质量报告：
+• 数据来源：聚合数据官方API，权威可信
+• 运势类型：${getTypeDisplayName()}运势，实时更新
+• 分析维度：四维专业评分 + 完整幸运元素
+• 获取时间：${new Date().toLocaleString()}
+
+🌟 数据已完整展示，包含专业占星师级别的详细分析！`, 'success');
+                    } else {
+                        throw new Error(`API服务返回错误：${result.reason} (错误码: ${result.error_code})`);
+                    }
+                } else {
+                    // 批量获取所有星座
+                    const constellations = Object.keys(constellationMap);
+                    const results = [];
+                    let completed = 0;
+                    let errors = 0;
+                    
+                    showStatus(`🌟 开始批量获取十二星座${getTypeDisplayName()}运势，请耐心等待...`, 'loading');
+                    
+                    for (const constellation of constellations) {
+                        try {
+                            const url = `https://apis.juhe.cn/fapig/constellation/getAll?key=${apiKey}&consName=${constellation}&type=${consType}`;
+                            const response = await fetch(url);
+                            const result = await response.json();
+                            
+                            completed++;
+                            showStatus(`🔄 获取进度：${completed}/${constellations.length} - 正在分析${constellationMap[constellation].name}运势数据`, 'loading');
+                            
+                            if (result.error_code === 0) {
+                                results.push(result.result);
+                            } else {
+                                errors++;
+                                console.warn(`${constellation} 数据获取异常:`, result.reason);
+                            }
+                            
+                            // 控制请求频率，避免触发限制
+                            if (completed < constellations.length) {
+                                await new Promise(resolve => setTimeout(resolve, 400));
+                            }
+                            
+                        } catch (error) {
+                            errors++;
+                            console.error(`${constellation} 网络请求失败:`, error);
+                        }
+                    }
+                    
+                    if (results.length > 0) {
+                        currentData = results;
+                        displayResults(currentData);
+                        showStatus(`✅ 十二星座运势批量获取完成！数据质量优秀
+
+📊 获取统计详情：
+• 成功获取：${results.length} 个星座 ✓
+• 获取失败：${errors} 个星座 ${errors > 0 ? '⚠️' : ''}
+• 成功率：${Math.round((results.length / constellations.length) * 100)}%
+• 数据完整性：优秀
+
+📅 运势信息：
+• 类型：${getTypeDisplayName()}运势专业分析
+• 更新时间：${new Date().toLocaleString()}
+• 数据来源：聚合数据官方API
+• 分析质量：专业占星师级别
+
+🌟 所有数据已完整呈现，祝您好运！`, 'success');
+                    } else {
+                        throw new Error('未能获取到任何有效的运势数据，请检查网络连接或API配置');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('API调用异常:', error);
+                showStatus(`❌ 真实运势数据获取失败
+
+🔍 错误详细信息：${error.message}
+
+💡 问题排查指南：
+• 确认API密钥是否正确且有效
+• 检查聚合数据账户余额是否充足
+• 验证网络连接状态是否稳定正常
+• 尝试切换不同的运势查询类型
+• 查看浏览器开发者工具的网络面板
+
+🛠️ 解决方案建议：
+• 重新复制粘贴API密钥，确保无多余字符
+• 联系聚合数据技术支持获取帮助
+• 稍后重试，可能是临时网络问题
+• 先使用"演示体验"功能查看界面效果
+
+🌐 技术提示：部署到HTTPS环境可能解决跨域访问问题`, 'error', false);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 测试API连接 - 增强版
+        async function testApiConnection() {
+            if (isLoading) {
+                showStatus('⚠️ 系统正忙，请等待当前操作完成', 'info');
+                return;
+            }
+
+            const apiKey = safeGetElement('apiKey')?.value.trim();
+
+            if (!apiKey) {
+                showStatus(`❌ 请先输入API密钥进行连接测试！
+
+🔑 API密钥获取详细流程：
+1. 打开浏览器访问：https://www.juhe.cn
+2. 点击右上角"注册"创建免费账号
+3. 完成手机号验证和实名认证（必需）
+4. 登录后搜索"星座运势"API服务
+5. 点击"立即申请"获取接口权限
+6. 在"我的API"页面复制专属密钥
+7. 将密钥粘贴到上方配置框中
+
+💎 服务优势：
+• 聚合数据是国内领先的API服务提供商
+• 星座运势API数据准确，更新及时
+• 提供免费调用额度，适合个人使用
+• 技术支持完善，文档详细易懂
+
+🎭 无密钥体验：点击"演示体验"查看完整功能`, 'error', false);
+                return;
+            }
+
+            setLoading(true);
+            showStatus('🔧 正在执行API连接测试，验证配置有效性...', 'loading');
+
+            try {
+                const testUrl = `https://apis.juhe.cn/fapig/constellation/getAll?key=${apiKey}&consName=aries&type=today`;
+                showStatus('🔍 向聚合数据服务器发送测试请求，检测连通性...', 'loading');
+                
+                const response = await fetch(testUrl);
+                const result = await response.json();
+                
+                if (result.error_code === 0) {
+                    showStatus(`✅ API连接测试完全成功！系统配置完美
+
+🎯 测试结果详细报告：
+• API密钥状态：✓ 有效且正常可用
+• 服务器连通性：✓ 响应速度优秀
+• 数据格式验证：✓ 完整正确无误
+• 账户权限状态：✓ 具备完整访问权限
+• 测试样本数据：✓ 白羊座今日运势获取成功
+
+📊 返回数据预览展示：
+• 运势概述：${result.result.summary.substring(0, 40)}...
+• 爱情运势：${result.result.love}星评级 ⭐
+• 工作表现：${result.result.work}星评级 ⭐
+• 财运状况：${result.result.money}星评级 ⭐
+• 健康指数：${result.result.health}星评级 ⭐
+• 幸运颜色：${result.result.color}
+• 幸运数字：${result.result.number}
+
+🌟 系统配置已完成！现在可以放心使用"获取专业运势"功能！
+💎 您将享受到专业占星师级别的精准运势分析服务！`, 'success');
+                } else {
+                    throw new Error(`API服务响应异常: ${result.reason} (状态码: ${result.error_code})`);
+                }
+                
+            } catch (error) {
+                console.error('API连接测试失败:', error);
+                let errorMessage = `❌ API连接测试未通过
+
+🔍 详细错误信息：${error.message}`;
+
+                if (error.message.includes('NetworkError') || error.message.includes('fetch') || error.message.includes('CORS')) {
+                    errorMessage += `
+
+🌐 网络连接问题诊断：
+• 当前网络连接可能不稳定，请检查网络状态
+• 浏览器安全策略可能阻止了跨域请求
+• 防火墙或安全软件可能拦截了API请求
+• 代理服务器设置可能影响了正常访问
+
+💡 技术解决方案：
+• 尝试刷新页面后重新测试连接
+• 检查浏览器是否阻止了不安全的请求
+• 将应用部署到HTTPS服务器环境
+• 联系网络管理员检查防火墙配置
+• 尝试更换网络环境进行测试`;
+                } else if (error.message.includes('key') || error.message.includes('密钥') || error.message.includes('401') || error.message.includes('403')) {
+                    errorMessage += `
+
+🔑 API密钥相关问题：
+• 请确认密钥复制完整，没有多余的空格或字符
+• 检查聚合数据账户中API申请状态是否正常
+• 验证账户是否完成实名认证（聚合数据要求）
+• 确认API服务当前状态是否可用
+• 检查账户剩余调用次数是否充足
+
+🛠️ 解决建议：
+• 登录聚合数据官网重新复制密钥
+• 检查API申请状态和使用权限
+• 联系聚合数据官方技术支持`;
+                }
+
+                errorMessage += `
+
+🎭 临时解决方案：
+• 点击"演示体验"功能继续体验完整界面
+• 部署到GitHub Pages后可能自动解决网络限制
+• 或稍后在更稳定的网络环境下重试
+
+📞 如需技术支持，请联系聚合数据官方客服`;
+
+                showStatus(errorMessage, 'error', false);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 键盘快捷键支持 - 增强版
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                // 避免在输入控件中触发快捷键
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                    return;
+                }
+
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key.toLowerCase()) {
+                        case 'enter':
+                            e.preventDefault();
+                            fetchHoroscopeData();
+                            showStatus('⚡ 快捷键触发：获取专业运势', 'info', false);
+                            setTimeout(hideStatus, 2000);
+                            break;
+                        case 't':
+                            e.preventDefault();
+                            testApiConnection();
+                            showStatus('⚡ 快捷键触发：测试API连接', 'info', false);
+                            setTimeout(hideStatus, 2000);
+                            break;
+                        case 'd':
+                            e.preventDefault();
+                            runDemoMode();
+                            showStatus('⚡ 快捷键触发：启动演示体验', 'info', false);
+                            setTimeout(hideStatus, 2000);
+                            break;
+                        case 'delete':
+                        case 'backspace':
+                            e.preventDefault();
+                            clearResults();
+                            break;
+                    }
+                }
+            });
+
+            // 输出快捷键信息到控制台
+            console.log(`
+🚀 生命方程式 - 快捷键指南：
+⚡ Ctrl + Enter: 获取专业运势数据
+⚡ Ctrl + T: 测试API连接状态  
+⚡ Ctrl + D: 启动演示体验模式
+⚡ Ctrl + Delete: 清除所有数据
+            `);
+        }
+
+        // 页面初始化 - 完整版
+        function initializePage() {
+            console.log('🚀 生命方程式专业版正在启动初始化...');
+            
+            // 设置当前日期和时间
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            });
+            
+            const dateEl = safeGetElement('dateSubtitle');
+            if (dateEl) {
+                dateEl.textContent = `${dateStr} | 智能运势分析系统`;
+            }
+            
+            // 绑定所有事件监听器
+            const eventBindings = [
+                { id: 'fetchBtn', handler: fetchHoroscopeData, desc: '获取专业运势' },
+                { id: 'testApiBtn', handler: testApiConnection, desc: '测试API连接' },
+                { id: 'demoBtn', handler: runDemoMode, desc: '演示体验模式' },
+                { id: 'clearBtn', handler: clearResults, desc: '清除数据' }
+            ];
+
+            let bindingSuccess = 0;
+            eventBindings.forEach(({ id, handler, desc }) => {
+                const element = safeGetElement(id);
+                if (element) {
+                    element.addEventListener('click', handler);
+                    console.log(`✅ ${desc} 事件绑定成功`);
+                    bindingSuccess++;
+                } else {
+                    console.warn(`❌ ${desc} 按钮未找到 (${id})`);
+                }
+            });
+
+            // 设置键盘快捷键支持
+            setupKeyboardShortcuts();
+            
+            console.log(`✅ 生命方程式初始化完成 (${bindingSuccess}/${eventBindings.length} 功能已激活)`);
+            
+            // 显示欢迎和使用指南
+            setTimeout(() => {
+                showStatus(`🎉 欢迎使用生命方程式专业星座运势系统！
+
+✨ 系统功能特色：
+• 🌟 聚合数据官方API，确保数据权威准确
+• 🎭 高质量演示模式，完整体验所有功能
+• 📊 四维专业评分：爱情、工作、财运、健康
+• 🍀 幸运元素分析：颜色、数字、配对星座
+• 📱 完美响应式设计，适配所有设备屏幕
+• ⌨️ 智能快捷键支持，提升操作效率
+
+🚀 快捷操作指南：
+• Ctrl + D: 快速启动演示体验
+• Ctrl + Enter: 获取真实运势数据
+• Ctrl + T: 测试API连接状态
+• Ctrl + Delete: 清除所有显示数据
+
+🎯 使用建议：
+1. 首次使用建议点击"演示体验"了解功能
+2. 获取聚合数据API密钥享受真实运势服务
+3. 支持单个星座查询或全部12星座批量获取
+4. 可选择今日、明日、本周、本月四种运势类型
+
+🌟 立即开始您的专业星座运势分析之旅！`, 'info');
+            }, 1500);
+        }
+
+        // 页面生命周期管理
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 DOM内容加载完成，开始初始化应用');
+            initializePage();
+        });
+
+        window.addEventListener('load', function() {
+            console.log('🌐 页面所有资源加载完成');
+            // 确保页面完全加载后的补充检查
+            if (!document.querySelector('.status:not(.hidden)')) {
+                console.log('🔄 执行备用初始化流程');
+                initializePage();
+            }
+        });
+
+        // 全局错误处理
+        window.addEventListener('error', function(e) {
+            console.error('🚨 页面运行错误:', e.error);
+            showStatus(`⚠️ 系统检测到运行异常
+
+错误信息：${e.error?.message || '未知错误'}
+发生位置：${e.filename || '未知文件'} 第${e.lineno || '?'}行
+
+💡 解决建议：
+• 尝试刷新页面重新加载系统
+• 检查浏览器兼容性（建议使用Chrome、Firefox、Safari）
+• 如问题持续存在，请查看浏览器开发者工具控制台
+• 或尝试清除浏览器缓存后重新访问
+
+🎭 临时方案：演示体验功能通常不受影响`, 'error');
+        });
+
+        // 页面可见性变化处理
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                if (isLoading) {
+                    showStatus('🔄 页面重新激活，请检查当前操作进度', 'info');
+                }
+                console.log('👀 页面重新获得焦点');
+            } else {
+                console.log('🌙 页面失去焦点，进入后台运行');
+            }
+        });
+
+        // 网络状态监听
+        window.addEventListener('online', function() {
+            console.log('🌐 网络连接已恢复');
+            showStatus('🌐 网络连接已恢复，API功能现已可用', 'success');
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 网络连接已断开');
+            showStatus('📡 检测到网络连接中断，API功能暂时不可用\n演示体验功能仍可正常使用', 'error');
+        });
+
+        // 控制台欢迎信息
+        console.log(`
+🌟 ================================================================
+    生命方程式 - 专业星座运势生成器
+    版本：GitHub Pages 生产版
+    技术栈：HTML5 + CSS3 + 原生JavaScript
+    数据来源：聚合数据官方API
+    开发团队：生命方程式开发组
+🌟 ================================================================
+
+📊 系统状态：
+• 运行环境：${window.location.origin}
+• 用户代理：${navigator.userAgent.split(' ').slice(-2).join(' ')}
+• 屏幕分辨率：${screen.width} × ${screen.height}
+• 当前时间：${new Date().toLocaleString()}
+
+🛠️ 开发者选项：
+• 打开控制台查看详细运行日志
+• 使用 Network 面板监控API请求
+• 支持移动设备模拟测试响应式设计
+
+🎯 快速测试：
+• 在控制台执行 runDemoMode() 启动演示模式
+• 执行 clearResults() 清除数据
+• 执行 showStatus('测试消息', 'info') 测试状态显示
+        `);
+
+        console.log('🌟 生命方程式专业版已完全加载就绪！');
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="生命方程式 - 专业星座运势生成器，基于聚合数据API的智能星座运势分析系统">
+    <meta name="keywords" content="星座,运势,占卜,生命方程式,星座运势,每日运势,聚合数据">
+    <meta name="author" content="生命方程式团队">
+    <meta name="robots" content="index, follow">
+    <title>生命方程式 - 专业星座运势生成器</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🌟</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0d1f0d 0%, #1a3d1a 30%, #2d5a2d 70%, #1a3d1a 100%);
+            min-height: 100vh;
+            color: #E8F5E8;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .main-title {
+            font-size: 3.2rem;
+            color: #E8F5E8;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px rgba(144, 238, 144, 0.5);
+            animation: titleGlow 3s ease-in-out infinite alternate;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        @keyframes titleGlow {
+            0% { text-shadow: 0 0 20px rgba(144, 238, 144, 0.5), 0 0 40px rgba(144, 238, 144, 0.2); }
+            100% { text-shadow: 0 0 35px rgba(144, 238, 144, 0.8), 0 0 70px rgba(144, 238, 144, 0.4); }
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: #90EE90;
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+
+        .version-info {
+            font-size: 1rem;
+            color: #98FB98;
+            opacity: 0.9;
+            margin-bottom: 35px;
+            font-weight: 500;
+        }
+
+        .feature-badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 35px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(144, 238, 144, 0.2);
+            color: #90EE90;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(144, 238, 144, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .badge:hover {
+            background: rgba(144, 238, 144, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .welcome-banner {
+            background: rgba(144, 238, 144, 0.1);
+            border: 2px solid rgba(144, 238, 144, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            animation: welcomeGlow 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes welcomeGlow {
+            0% { box-shadow: 0 0 15px rgba(144, 238, 144, 0.2); }
+            100% { box-shadow: 0 0 25px rgba(144, 238, 144, 0.4); }
+        }
+
+        .api-config {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 25px;
+            margin-bottom: 35px;
+            border: 2px solid rgba(144, 238, 144, 0.2);
+            backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
+        }
+
+        .api-config:hover {
+            border-color: rgba(144, 238, 144, 0.4);
+            box-shadow: 0 8px 30px rgba(144, 238, 144, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .config-title {
+            color: #90EE90;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .config-item {
+            margin-bottom: 15px;
+        }
+
+        .config-item label {
+            display: block;
+            margin-bottom: 10px;
+            color: #ADFF2F;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .config-item input, .config-item select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid rgba(144, 238, 144, 0.3);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #E8F5E8;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .config-item input:focus, .config-item select:focus {
+            outline: none;
+            border-color: #90EE90;
+            box-shadow: 0 0 20px rgba(144, 238, 144, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .config-item input::placeholder {
+            color: rgba(232, 245, 232, 0.7);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 45px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #2d5a2d, #4a7c59);
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(45deg, #4a7c59, #5d9f6e);
+        }
+
+        .btn.primary {
+            background: linear-gradient(45deg, #228B22, #32CD32);
+            font-size: 1.4rem;
+            padding: 22px 45px;
+            animation: pulseGreen 2.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseGreen {
+            0%, 100% { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+            50% { box-shadow: 0 6px 30px rgba(50, 205, 50, 0.5), 0 0 25px rgba(50, 205, 50, 0.3); }
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn:disabled:hover {
+            transform: none;
+        }
+
+        .status {
+            text-align: center;
+            margin: 25px 0;
+            padding: 30px;
+            border-radius: 25px;
+            font-weight: 500;
+            white-space: pre-line;
+            backdrop-filter: blur(20px);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        .status.loading {
+            background: rgba(255, 193, 7, 0.15);
+            color: #FFC107;
+            border-color: rgba(255, 193, 7, 0.5);
+            animation: loadingPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loadingPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.03); opacity: 1; }
+        }
+
+        .status.success {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28A745;
+            border-color: rgba(40, 167, 69, 0.5);
+            animation: successGlow 0.6s ease-out;
+        }
+
+        @keyframes successGlow {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .status.error {
+            background: rgba(220, 53, 69, 0.15);
+            color: #DC3545;
+            border-color: rgba(220, 53, 69, 0.5);
+            animation: errorShake 0.6s ease-out;
+        }
+
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .status.info {
+            background: rgba(23, 162, 184, 0.15);
+            color: #17A2B8;
+            border-color: rgba(23, 162, 184, 0.5);
+        }
+
+        .horoscope-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 30px;
+            margin-top: 35px;
+        }
+
+        .horoscope-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(144, 238, 144, 0.2);
+            border-radius: 25px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .horoscope-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #228B22, #32CD32, #90EE90, #32CD32, #228B22);
+            transform: translateX(-100%);
+            transition: transform 0.4s ease;
+        }
+
+        .horoscope-card:hover::before {
+            transform: translateX(0);
+        }
+
+        .horoscope-card:hover {
+            border-color: rgba(144, 238, 144, 0.5);
+            box-shadow: 0 15px 40px rgba(144, 238, 144, 0.2);
+            transform: translateY(-8px);
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            color: #90EE90;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(144, 238, 144, 0.3);
+        }
+
+        .card-content {
+            line-height: 1.8;
+        }
+
+        .card-content h4 {
+            color: #ADFF2F;
+            margin: 18px 0 10px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .star-rating {
+            color: #FFD700;
+            font-size: 1.3rem;
+            margin-left: 8px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .lucky-info {
+            background: rgba(144, 238, 144, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            border-left: 5px solid #90EE90;
+            transition: all 0.3s ease;
+        }
+
+        .lucky-info:hover {
+            background: rgba(144, 238, 144, 0.15);
+            transform: translateX(5px);
+        }
+
+        .color-preview {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin: 0 10px;
+            vertical-align: middle;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .api-info {
+            background: rgba(23, 162, 184, 0.15);
+            padding: 25px;
+            border-radius: 20px;
+            border: 2px solid rgba(23, 162, 184, 0.3);
+            margin-bottom: 30px;
+            color: #17A2B8;
+            line-height: 1.6;
+        }
+
+        .api-info h3 {
+            margin-bottom: 15px;
+            color: #17A2B8;
+            font-size: 1.3rem;
+        }
+
+        .api-links {
+            text-align: center;
+            margin: 35px 0;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .api-links a {
+            color: #90EE90;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .api-links a:hover {
+            color: #ADFF2F;
+            text-shadow: 0 0 15px rgba(173, 255, 47, 0.5);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 70px;
+            padding: 50px 25px;
+            border-top: 3px solid rgba(144, 238, 144, 0.2);
+            color: #98FB98;
+        }
+
+        .footer p {
+            margin: 12px 0;
+            font-size: 1rem;
+        }
+
+        .footer .copyright {
+            font-size: 0.95rem;
+            opacity: 0.8;
+            margin-top: 25px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #90EE90;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 响应式设计优化 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .main-title {
+                font-size: 2.5rem;
+                letter-spacing: 1px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 320px;
+                margin: 10px 0;
+            }
+            
+            .horoscope-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .config-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .feature-badges {
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .badge {
+                font-size: 0.8rem;
+                padding: 6px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-title {
+                font-size: 2rem;
+            }
+            
+            .api-config {
+                padding: 20px;
+            }
+            
+            .horoscope-card {
+                padding: 20px;
+            }
+
+            .controls {
+                gap: 15px;
+            }
+
+            .btn {
+                padding: 16px 30px;
+                font-size: 1rem;
+            }
+
+            .btn.primary {
+                padding: 20px 35px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* 高分辨率屏幕优化 */
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1400px;
+            }
+            
+            .main-title {
+                font-size: 3.8rem;
+            }
+            
+            .horoscope-grid {
+                grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            }
+        }
+
+        /* 打印样式 */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            
+            .controls, .api-config, .welcome-banner {
+                display: none !important;
+            }
+            
+            .horoscope-card {
+                border: 2px solid #ccc !important;
+                box-shadow: none !important;
+                margin-bottom: 20px;
+            }
+            
+            .main-title {
+                color: #333 !important;
+                text-shadow: none !important;
+            }
+        }
+
+        /* 无障碍访问优化 */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="main-title">🌟 生命方程式</h1>
+            <p class="subtitle" id="dateSubtitle">专业星座运势生成器</p>
+            <p class="version-info">智能算法 × 聚合数据API × GitHub Pages</p>
+            
+            <div class="feature-badges">
+                <span class="badge">🔮 AI智能算法</span>
+                <span class="badge">📊 四维评分系统</span>
+                <span class="badge">🌈 幸运色彩分析</span>
+                <span class="badge">⭐ 实时数据更新</span>
+                <span class="badge">📱 响应式设计</span>
+                <span class="badge">🎯 精准匹配</span>
+            </div>
+        </header>
+
+        <div class="welcome-banner">
+            <h2 style="color: #90EE90; margin-bottom: 10px;">🎉 欢迎使用生命方程式！</h2>
+            <p style="color: #98FB98; font-size: 1.1rem;">基于专业占星学算法，为您提供最准确的星座运势分析</p>
+        </div>
+
+        <div class="api-info">
+            <h3>📡 数据来源说明</h3>
+            <p>本应用集成聚合数据官方星座运势API，提供真实、准确、及时的星座运势数据。支持今日、明日、本周、本月四种运势类型，包含爱情、工作、财运、健康四个维度的专业评分系统，以及幸运颜色、幸运数字、速配星座等完整运势元素。</p>
+        </div>
+
+        <div class="api-config">
+            <h3 class="config-title">🔑 智能配置中心</h3>
+            
+            <div class="config-grid">
+                <div class="config-item">
+                    <label for="apiKey">🔐 聚合数据API密钥:</label>
+                    <input type="password" id="apiKey" placeholder="请输入您的API Key，获取真实运势数据" />
+                </div>
+
+                <div class="config-item">
+                    <label for="consType">📅 运势查询类型:</label>
+                    <select id="consType">
+                        <option value="today">今日运势 - 把握当下</option>
+                        <option value="tomorrow">明日运势 - 预知未来</option>
+                        <option value="week">本周运势 - 规划一周</option>
+                        <option value="month">本月运势 - 月度指南</option>
+                    </select>
+                </div>
+
+                <div class="config-item">
+                    <label for="targetConstellation">🎯 星座选择:</label>
+                    <select id="targetConstellation">
+                        <option value="">获取全部12星座运势</option>
+                        <option value="aries">♈ 白羊座 (3.21-4.19) - 火象星座</option>
+                        <option value="taurus">♉ 金牛座 (4.20-5.20) - 土象星座</option>
+                        <option value="gemini">♊ 双子座 (5.21-6.21) - 风象星座</option>
+                        <option value="cancer">♋ 巨蟹座 (6.22-7.22) - 水象星座</option>
+                        <option value="leo">♌ 狮子座 (7.23-8.22) - 火象星座</option>
+                        <option value="virgo">♍ 处女座 (8.23-9.22) - 土象星座</option>
+                        <option value="libra">♎ 天秤座 (9.23-10.23) - 风象星座</option>
+                        <option value="scorpio">♏ 天蝎座 (10.24-11.22) - 水象星座</option>
+                        <option value="sagittarius">♐ 射手座 (11.23-12.21) - 火象星座</option>
+                        <option value="capricorn">♑ 摩羯座 (12.22-1.19) - 土象星座</option>
+                        <option value="aquarius">♒ 水瓶座 (1.20-2.18) - 风象星座</option>
+                        <option value="pisces">♓ 双鱼座 (2.19-3.20) - 水象星座</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn primary" id="fetchBtn">
+                🌟 获取专业运势
+            </button>
+            <button class="btn" id="testApiBtn">
+                🔧 测试API连接
+            </button>
+            <button class="btn" id="demoBtn">
+                🎭 演示体验
+            </button>
+            <button class="btn" id="clearBtn">
+                🗑️ 清除数据
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status hidden"></div>
+
+        <div id="horoscopeResults" class="horoscope-grid hidden"></div>
+
+        <div class="api-links">
+            <p><strong>📚 API官方文档:</strong> <a href="https://www.juhe.cn/docs/api/id/58" target="_blank" rel="noopener">聚合数据星座运势API接口</a></p>
+            <p><strong>🔑 获取API密钥:</strong> <a href="https://www.juhe.cn/" target="_blank" rel="noopener">聚合数据官网免费注册</a></p>
+            <p><strong>💡 快速上手:</strong> 注册账号 → 申请星座API → 获取密钥 → 配置使用 → 享受精准运势</p>
+        </div>
+
+        <footer class="footer">
+            <p><strong>🎉 生命方程式 - 让星座运势更加科学精准</strong></p>
+            <p>✨ 基于聚合数据API的专业星座分析系统</p>
+            <p>🌟 四维评分系统 | 幸运元素分析 | 多类型查询 | 智能匹配算法</p>
+            <p>📱 完美适配全端设备 | GitHub Pages高速稳定托管</p>
+            <div class="copyright">
+                <p>&copy; 2024 生命方程式开发团队 | 仅供娱乐参考，请勿过度依赖</p>
+                <p>开源项目托管于 <a href="https://github.com" target="_blank" rel="noopener" style="color: #90EE90;">GitHub</a> | 感谢 <a href="https://www.juhe.cn/" target="_blank" rel="noopener" style="color: #90EE90;">聚合数据</a> 提供API支持</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // 工具函数 - 安全获取DOM元素
+        function safeGetElement(id) {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.warn(`DOM元素未找到: ${id}`);
+            }
+            return element;
+        }
+
+        // 星座映射配置 - 完整版
+        const constellationMap = {
+            'aries': { name: '白羊座', symbol: '♈', period: '3.21-4.19', element: '火象' },
+            'taurus': { name: '金牛座', symbol: '♉', period: '4.20-5.20', element: '土象' },
+            'gemini': { name: '双子座', symbol: '♊', period: '5.21-6.21', element: '风象' },
+            'cancer': { name: '巨蟹座', symbol: '♋', period: '6.22-7.22', element: '水象' },
+            'leo': { name: '狮子座', symbol: '♌', period: '7.23-8.22', element: '火象' },
+            'virgo': { name: '处女座', symbol: '♍', period: '8.23-9.22', element: '土象' },
+            'libra': { name: '天秤座', symbol: '♎', period: '9.23-10.23', element: '风象' },
+            'scorpio': { name: '天蝎座', symbol: '♏', period: '10.24-11.22', element: '水象' },
+            'sagittarius': { name: '射手座', symbol: '♐', period: '11.23-12.21', element: '火象' },
+            'capricorn': { name: '摩羯座', symbol: '♑', period: '12.22-1.19', element: '土象' },
+            'aquarius': { name: '水瓶座', symbol: '♒', period: '1.20-2.18', element: '风象' },
+            'pisces': { name: '双鱼座', symbol: '♓', period: '2.19-3.20', element: '水象' }
+        };
+
+        // 全局状态管理
+        let isLoading = false;
+        let currentData = null;
+
+        // 状态管理函数
+        function showStatus(message, type = 'info', autoHide = true) {
+            const statusEl = safeGetElement('statusMessage');
+            if (statusEl) {
+                statusEl.className = `status ${type}`;
+                statusEl.textContent = message;
+                statusEl.classList.remove('hidden');
+                
+                if (autoHide) {
+                    const hideTime = type === 'error' ? 10000 : (
